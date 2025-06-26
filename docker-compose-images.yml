@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  application:
+    image: diego2312/clouxter-app:latest
+    platform: linux/amd64 
+    container_name: php_application
+    ports:
+      - '9001:80'
+    environment:
+      - DB_HOST=database
+      - DB_NAME=php_application
+      - DB_USER=app_user
+      - DB_PASSWORD=secure_password
+    volumes:
+      - ./logs:/var/www/html/logs
+    depends_on:
+      database:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health" , "||", "exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  database:
+    image: diego2312/clouxter-db:latest
+    platform: linux/amd64  
+    container_name: php_database
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-strongrootpass}
+      - MYSQL_DATABASE=php_application
+      - MYSQL_USER=app_user
+      - MYSQL_PASSWORD=secure_password
+      - MYSQL_ROOT_HOST=%
+    volumes:
+      - db_data:/var/lib/mysql
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "app_user", "-psecure_password", "--silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  db_data:
